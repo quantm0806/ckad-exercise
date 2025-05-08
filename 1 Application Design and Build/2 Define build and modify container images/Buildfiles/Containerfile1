@@ -1,4 +1,4 @@
-FROM ode:lts-alpine
+FROM node:lts-alpine
 
 # set the current working directory inside the container
 WORKDIR /app
