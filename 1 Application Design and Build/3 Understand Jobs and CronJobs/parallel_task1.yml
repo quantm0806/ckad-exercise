@@ -3,9 +3,9 @@ kind: Job
 metadata:
   name: parallel
 spec:
+  backoffLimit: 4
   completions: 8
   parallelism: 2
-  backoffLimit: 4
   template:
     spec:
       restartPolicy: OnFailure

@@ -3,11 +3,11 @@ kind: Job
 metadata:
   name: parallel
 spec:
-  backoffLimit: 10
+  backoffLimit: 2
   template:
     spec:
       restartPolicy: OnFailure
       containers:
       - name: ctr
         image: alpine:latest
-        command: ['sh', '-c', 'echo "Lets smash the CKAD" && sleep 25']
+        command: ['sh', '-c', 'exit 1']
