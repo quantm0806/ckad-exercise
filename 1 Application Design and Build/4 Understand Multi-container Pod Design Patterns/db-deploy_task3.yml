@@ -21,4 +21,8 @@ spec:
                 name: db-access
           ports:
             - containerPort: 5432
+        - name: db-admin
+          image: adminer
+          ports:
+            - containerPort: 8080
 
