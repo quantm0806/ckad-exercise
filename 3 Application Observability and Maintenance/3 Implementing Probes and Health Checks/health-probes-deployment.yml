@@ -1,0 +1,36 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  creationTimestamp: null
+  labels:
+    app: health-probes-deployment
+  name: health-probes-deployment
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: health-probes-deployment
+  strategy: {}
+  template:
+    metadata:
+      creationTimestamp: null
+      labels:
+        app: health-probes-deployment
+    spec:
+      containers:
+      - image: health-probes
+        imagePullPolicy: IfNotPresent
+        name: health-probes
+        resources: {}
+        livenessProbe:
+          httpGet:
+            path: /healthz
+            port: 80
+          periodSeconds: 5
+        readinessProbe:
+          httpGet:
+            path: /healthz
+            port: 80
+          initialDelaySeconds: 5
+
+status: {}

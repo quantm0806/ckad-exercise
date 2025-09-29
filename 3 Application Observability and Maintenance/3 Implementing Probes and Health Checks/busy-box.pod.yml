@@ -1,0 +1,33 @@
+apiVersion: v1
+kind: Pod
+metadata:
+  creationTimestamp: null
+  labels:
+    app: busybox-probes
+  name: busybox-probes
+spec:
+  containers:
+  - image: busybox
+    name: busybox
+    resources: {}
+    args:
+      - /bin/sh
+      - -c
+      - touch /tmp/healthy; sleep 30; rm -rf /tmp/healthy; sleep 120
+    readinessProbe:
+      exec:
+        command:
+        - cat
+        - /tmp/healthy
+      failureThreshold: 30
+      periodSeconds: 10
+    livenessProbe:
+      exec:
+        command:
+          - cat
+          - /tmp/healthy
+      failureThreshold: 5
+      periodSeconds: 5
+
+
+status: {}
