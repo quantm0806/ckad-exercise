@@ -1,0 +1,47 @@
+Task 1:
+```yaml
+apiVersion: v1
+kind: Service
+metadata:
+  creationTimestamp: null
+  name: svc-safc
+spec:
+  ports:
+  - name: 31111-8080
+    port: 9001
+    protocol: TCP
+    targetPort: 8080
+    nodePort: 31111
+  selector:
+    app: tickets
+    club: safc
+  type: NodePort
+status:
+  loadBalancer: {}
+
+```
+
+Task 2:
+- Set `ipFamilyPolicy: PreferDualStack` in `.spec`
+
+Task 3:
+```yaml
+apiVersion: v1
+kind: Service
+metadata:
+  creationTimestamp: null
+  name: svc-safc
+spec:
+  ports:
+  - name: 31111-8080
+    port: 9001
+    protocol: TCP
+    targetPort: 80
+    nodePort: 31111
+  selector:
+    app: tickets
+    club: safc
+  type: NodePort
+status:
+  loadBalancer: {}
+```
