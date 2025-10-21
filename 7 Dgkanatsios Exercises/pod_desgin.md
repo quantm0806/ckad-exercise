@@ -399,43 +399,102 @@ status:
 ```
 
 ## Jobs
-Create a job named pi with image perl:5.34 that runs the command with arguments "perl -Mbignum=bpi -wle 'print bpi(
-2000)'"
+### Create a job named pi with image perl:5.34 that runs the command with arguments "perl -Mbignum=bpi -wle 'print bpi(2000)'"
+### Wait till it's done, get the output
+```bash
+kubectl create job pi --image=perl:5.34 -- perl -Mbignum=bpi -wle 'print bpi(2000)'
+kubectl get po
+kubectl logs pi-5c7cr
+```
 
-Wait till it's done, get the output
+### Create a job with the image busybox that executes the command 'echo hello;sleep 30;echo world'
+```bash
+kubectl create job busybox --image=busybox -- /bin/sh -c "echo hello;sleep 30;echo world"
+```
 
-Create a job with the image busybox that executes the command 'echo hello;sleep 30;echo world'
+### Follow the logs for the pod (you'll wait for 30 seconds)
+```bash
+kubectl get po
+kubectl logs -f busybox-9hzg5
+ ```
 
-Follow the logs for the pod (you'll wait for 30 seconds)
+### See the status of the job, describe it and see the logs
+```bash
+kubectl get job busybox
+kubectl describe job busybox
+kubectl logs busybox-9hzg5
+```
 
-See the status of the job, describe it and see the logs
+### Delete the job
+```kubectl
+kubectl delete job pi
+kubectl delete job busybox
+```
 
-Delete the job
+### Create the same job, make it run 5 times, one after the other. Verify its status and delete it
+```bash
+kubectl create job busybox --image=busybox --dry-run=client -o yaml -- /bin/sh -c "echo hello;sleep 30;echo world" > jobs.yaml
+# Add completions: 5 into spec
+kubectl get jobs
+kubectl delete job busybox
+```
 
-Create the same job, make it run 5 times, one after the other. Verify its status and delete it
+### Create the same job, but make it run 5 parallel times
+```bash
+kubectl create job busybox --image=busybox --dry-run=client -o yaml -- /bin/sh -c "echo hello;sleep 5;echo world" > jobs.yaml
+# Add parallelism: 5 into spec
+kubectl get jobs
+kubectl delete job busybox
+```
 
-Create the same job, but make it run 5 parallel times
+### Create a job but ensure that it will be automatically terminated by kubernetes if it takes more than 30 seconds to execute
+```bash
+kubectl create job busybox --image=busybox --dry-run=client -o yaml -- /bin/sh -c "echo hello;sleep 30;echo world" > jobs.yaml
+# Add activeDeadlineSeconds: 30 into spec
+kubectl get jobs
+kubectl delete job busybox
+```
 
-Create a job but ensure that it will be automatically terminated by kubernetes if it takes more than 30 seconds to
-execute
+## Cron jobs
+kubernetes.io > Documentation > Tasks > Run Jobs > [Running Automated Tasks with a CronJob](https://kubernetes.io/docs/tasks/job/automated-tasks-with-cron-jobs/)
 
-Cron jobs
-kubernetes.io > Documentation > Tasks > Run Jobs > Running Automated Tasks with a CronJob
+### Create a cron job with image busybox that runs on a schedule of "*/1 * * * *" and writes 'date; echo Hello from the Kubernetes cluster' to standard output
+```bash
+kubectl create cj busybox --image=busybox --schedule='*/1 * * * *' -- bin/sh -c "date; echo Hello from the Kubernetes cluster"
+```
 
-Create a cron job with image busybox that runs on a schedule of "*/1 * * * *" and writes 'date; echo Hello from the
-Kubernetes cluster' to standard output
+### See its logs and delete it
+```bash
+kubectl get pods
+kubectl logs <pod-name>
+kubectl delete cj busybox
+```
 
-See its logs and delete it
+### Create the same cron job again, and watch the status. Once it ran, check which job ran by the created cron job. Check the log, and delete the cron job
+```bash
+kubectl create cj busybox --image=busybox --schedule='*/1 * * * *' -- bin/sh -c "date; echo Hello from the Kubernetes cluster"
+kubectl get cj --watch
+kubectl get jobs
+kubectl logs job/<job-name>
+kubectl delete cj busybox
+```
 
-Create the same cron job again, and watch the status. Once it ran, check which job ran by the created cron job. Check
-the log, and delete the cron job
+### Create a cron job with image busybox that runs every minute and writes 'date; echo Hello from the Kubernetes cluster' to standard output. The cron job should be terminated if it takes more than 17 seconds to start execution after its scheduled time (i.e. the job missed its scheduled time).
+```bash
+kubectl create cj busybox --image=busybox --schedule='*/1 * * * *' --dry-run=client -o yaml -- bin/sh -c "date; echo Hello from the Kubernetes cluster" > cj.yaml
+# Add startingDeadlineSeconds: 17 into spec
+kubectl apply -f cj.yaml
+```
 
-Create a cron job with image busybox that runs every minute and writes 'date; echo Hello from the Kubernetes cluster' to
-standard output. The cron job should be terminated if it takes more than 17 seconds to start execution after its
-scheduled time (i.e. the job missed its scheduled time).
+### Create a cron job with image busybox that runs every minute and writes 'date; echo Hello from the Kubernetes cluster' to standard output. The cron job should be terminated if it successfully starts but takes more than 12 seconds to complete execution.
+```bash
+kubectl create cj busybox --image=busybox --schedule='*/1 * * * *' --dry-run=client -o yaml -- bin/sh -c "date; echo Hello from the Kubernetes cluster" > cj.yaml
+# Add activeDeadlineSeconds: 12 into spec.jobTemplate.spec
+kubectl apply -f cj.yaml
+```
 
-Create a cron job with image busybox that runs every minute and writes 'date; echo Hello from the Kubernetes cluster' to
-standard output. The cron job should be terminated if it successfully starts but takes more than 12 seconds to complete
-execution.
-
-Create a job from cronjob.
+### Create a job from cronjob.
+```bash
+kubectl create cj busybox --image=busybox --schedule='*/1 * * * *' --dry-run=client -o yaml -- bin/sh -c "date; echo Hello from the Kubernetes cluster" > cj.yaml
+kubectl create job --from=cj/busybox
+```
