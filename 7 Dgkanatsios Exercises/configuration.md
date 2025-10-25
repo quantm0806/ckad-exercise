@@ -235,7 +235,7 @@ spec:
 status: {}
 ```
 
-Limit Ranges
+## Limit Ranges
 kubernetes.io > Documentation > Concepts > Policies > Limit Ranges (https://kubernetes.io/docs/concepts/policy/limit-range/)
 
 ### Create a namespace named limitrange with a LimitRange that limits pod memory to a max of 500Mi and min of 100Mi
@@ -290,65 +290,245 @@ spec:
 status: {}
 ```
 
-Resource Quotas
+## Resource Quotas
 kubernetes.io > Documentation > Concepts > Policies > Resource Quotas (https://kubernetes.io/docs/concepts/policy/resource-quotas/)
 
 ### Create ResourceQuota in namespace one with hard requests cpu=1, memory=1Gi and hard limits cpu=2, memory=2Gi.
 ```bash
+kubectl create quota one-quota -n one --hard=cpu=1,memory=1Gi,limits.cpu=2,limits.memory=2Gi
 ```
-### Attempt to create a pod with resource requests cpu=2, memory=3Gi and limits cpu=3, memory=4Gi in namespace one
-```bash
-```
-### Create a pod with resource requests cpu=0.5, memory=1Gi and limits cpu=1, memory=2Gi in namespace one
-```bash
-```
-Secrets
-kubernetes.io > Documentation > Concepts > Configuration > Secrets
 
-kubernetes.io > Documentation > Tasks > Inject Data Into Applications > Distribute Credentials Securely Using Secrets
+### Attempt to create a pod with resource requests cpu=2, memory=3Gi and limits cpu=3, memory=4Gi in namespace one
+```yaml
+apiVersion: v1
+kind: Pod
+metadata:
+  creationTimestamp: null
+  labels:
+    run: nginx
+  name: nginx
+  namespace: one
+spec:
+  containers:
+  - image: nginx
+    name: nginx
+    resources: 
+      requests:
+        cpu: 2
+        memory: 3Gi
+      limits:
+        cpu: 3
+        memory: 4Gi
+  dnsPolicy: ClusterFirst
+  restartPolicy: Always
+status: {}
+```
+
+### Create a pod with resource requests cpu=0.5, memory=1Gi and limits cpu=1, memory=2Gi in namespace one
+```yaml
+apiVersion: v1
+kind: Pod
+metadata:
+  creationTimestamp: null
+  labels:
+    run: nginx
+  name: nginx
+  namespace: one
+spec:
+  containers:
+  - image: nginx
+    name: nginx
+    resources: 
+      requests:
+        cpu: 0.5
+        memory: 1Gi
+      limits:
+        cpu: 1
+        memory: 2Gi
+  dnsPolicy: ClusterFirst
+  restartPolicy: Always
+status: {}
+```
+
+## Secrets
+kubernetes.io > Documentation > Concepts > Configuration > [Secrets](https://kubernetes.io/docs/concepts/configuration/secret/)
+
+kubernetes.io > Documentation > Tasks > Inject Data Into Applications > [Distribute Credentials Securely Using Secrets](https://kubernetes.io/docs/tasks/inject-data-application/distribute-credentials-secure/)
 
 ### Create a secret called mysecret with the values password=mypass
 ```bash
+kubectl create secret generic mysecret --from-literal=password=mypass
 ```
-Create a secret called mysecret2 that gets key/value from a file
-Create a file called username with the value admin:
 
-### echo -n admin > username
+### Create a secret called mysecret2 that gets key/value from a file
+Create a file called username with the value admin:
 ```bash
+echo -n admin > username
 ```
+
+```bash
+kubectl create secret generic mysecret2 --from-file=username
+```
+
 ### Get the value of mysecret2
 ```bash
+kubectl get secret mysecret2 -o yaml
 ```
+
 ### Create an nginx pod that mounts the secret mysecret2 in a volume on path /etc/foo
-```bash
+```yaml
+apiVersion: v1
+kind: Pod
+metadata:
+  creationTimestamp: null
+  labels:
+    run: nginx
+  name: nginx
+spec:
+  containers:
+  - image: nginx
+    name: nginx
+    volumeMounts:
+    - name: secret-volume
+      mountPath: /etc/foo
+    resources: {}
+  dnsPolicy: ClusterFirst
+  restartPolicy: Always
+  volumes:
+  - name: secret-volume
+    secret:
+      secretName: mysecret2
+status: {}
 ```
+
 ### Delete the pod you just created and mount the variable 'username' from secret mysecret2 onto a new nginx pod in env variable called 'USERNAME'
-```bash
+```yaml
+apiVersion: v1
+kind: Pod
+metadata:
+  creationTimestamp: null
+  labels:
+    run: nginx
+  name: nginx
+spec:
+  containers:
+  - image: nginx
+    name: nginx
+    resources: {}
+    env:
+    - name: USERNAME
+      valueFrom:
+        secretKeyRef:
+          name: mysecret2
+          key: username
+  dnsPolicy: ClusterFirst
+  restartPolicy: Always
+status: {}
 ```
+
 ### Create a Secret named 'ext-service-secret' in the namespace 'secret-ops'. Then, provide the key-value pair API_KEY=LmLHbYhsgWZwNifiqaRorH8T as literal.
 ```bash
+kubectl create ns secret-ops
+kubectl create secret generic ext-service-secret -n secret-ops --from-literal=API_KEY=LmLHbYhsgWZwNifiqaRorH8T
 ```
+
 ### Consuming the Secret. Create a Pod named 'consumer' with the image 'nginx' in the namespace 'secret-ops' and consume the Secret as an environment variable. Then, open an interactive shell to the Pod, and print all environment variables.
 ```bash
+kubectl run consumer --image=nginx -n secret-ops $do > nginx.yaml  
+# Edit nginx.yaml. The yaml is below
+kubectl apply -f nginx.yaml
+kubectl exec consumer -n secret-ops -it -- bash
+env | grep API_KEY
 ```
+
+```yaml
+apiVersion: v1
+kind: Pod
+metadata:
+  creationTimestamp: null
+  labels:
+    run: consumer
+  name: consumer
+  namespace: secret-ops
+spec:
+  containers:
+  - image: nginx
+    env:
+    - name: API_KEY
+      valueFrom:
+        secretKeyRef:
+          name: ext-service-secret
+          key: API_KEY
+    name: consumer
+    resources: {}
+  dnsPolicy: ClusterFirst
+  restartPolicy: Always
+status: {}
+```
+
 ### Create a Secret named 'my-secret' of type 'kubernetes.io/ssh-auth' in the namespace 'secret-ops'. Define a single key named 'ssh-privatekey', and point it to the file 'id_rsa' in this directory.
 ```bash
+ssh-keygen -t rsa -f ./id_rsa
+kubectl create secret generic my-secret --type=kubernetes.io/ssh-auth -n secret-ops --from-file=ssh-privatekey=./id_rsa
 ```
+
 ### Create a Pod named 'consumer' with the image 'nginx' in the namespace 'secret-ops', and consume the Secret as Volume. Mount the Secret as Volume to the path /var/app with read-only access. Open an interactive shell to the Pod, and render the contents of the file.
 ```bash
+kubectl run consumer --image=nginx -n secret-ops $do > nginx.yaml
+# Edit nginx.yaml. The yaml is below
+kubectl apply -f nginx.yaml
+kubectl exec -it consumer -- bash
+ls /var/app
 ```
-ServiceAccounts
-kubernetes.io > Documentation > Tasks > Configure Pods and Containers > Configure Service Accounts for Pods
+
+```yaml
+apiVersion: v1
+kind: Pod
+metadata:
+  creationTimestamp: null
+  labels:
+    run: consumer
+  name: consumer
+  namespace: secret-ops
+spec:
+  containers:
+  - image: nginx
+    name: consumer
+    resources: {}
+    volumeMounts:
+    - name: secret-volume
+      mountPath: /var/app
+      readOnly: true
+  volumes:
+  - name: secret-volume
+    secret:
+      secretName: my-secret
+  dnsPolicy: ClusterFirst
+  restartPolicy: Always
+status: {}
+```
+
+## ServiceAccounts
+kubernetes.io > Documentation > Tasks > Configure Pods and Containers > [Configure Service Accounts for Pods](https://kubernetes.io/docs/tasks/configure-pod-container/configure-service-account/)
 
 ### See all the service accounts of the cluster in all namespaces
 ```bash
+kubectl get sa -A
 ```
+
 ### Create a new serviceaccount called 'myuser'
 ```bash
+kubectl create sa myuser
 ```
+
 ### Create an nginx pod that uses 'myuser' as a service account
 ```bash
+kubectl run nginx --image=nginx $do > nginx.yaml
+# Edit nginx.yaml: add serviceAccountName: myuser into spec section
+kubectl apply -f nginx.yaml
 ```
+
 ### Generate an API token for the service account 'myuser'
 ```bash
+kubectl create token myuser
 ```
