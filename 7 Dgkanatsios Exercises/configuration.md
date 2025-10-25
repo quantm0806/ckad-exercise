@@ -240,13 +240,56 @@ kubernetes.io > Documentation > Concepts > Policies > Limit Ranges (https://kube
 
 ### Create a namespace named limitrange with a LimitRange that limits pod memory to a max of 500Mi and min of 100Mi
 ```bash
+kubectl create ns limitrange
 ```
+
+The limit range will look like this:
+```yaml
+apiVersion: v1
+kind: LimitRange
+metadata:
+  name: mem-min-max-demo-lr
+  namespace: limitrange
+spec:
+  limits:
+  - max:
+      memory: 500Mi
+    min:
+      memory: 100Mi
+    type: Container
+```
+
 ### Describe the namespace limitrange
 ```bash
+kubectl describe ns limitrange
 ```
+
 ### Create an nginx pod that requests 250Mi of memory in the limitrange namespace
 ```bash
+kubectl run nginx --image=nginx --restart=Never --dry-run=client -o yaml > nginx.yaml
 ```
+Edit the `nginx.yaml`. The yaml looks like:
+```yaml
+apiVersion: v1
+kind: Pod
+metadata:
+  creationTimestamp: null
+  labels:
+    run: nginx
+  name: nginx
+  namespace: limitrange
+spec:
+  containers:
+  - image: nginx
+    name: nginx
+    resources:
+      requests:
+        memory: 250Mi
+  dnsPolicy: ClusterFirst
+  restartPolicy: Never
+status: {}
+```
+
 Resource Quotas
 kubernetes.io > Documentation > Concepts > Policies > Resource Quotas (https://kubernetes.io/docs/concepts/policy/resource-quotas/)
 
